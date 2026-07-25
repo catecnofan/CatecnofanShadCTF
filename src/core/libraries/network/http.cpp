@@ -18,13 +18,6 @@ static std::map<s32, RequestObj> g_requests;
 static std::mutex g_templates_map_mutex;
 static std::mutex g_requests_map_mutex;
 
-// connId -> {base_url, tmpl_id}, populated by sceHttpCreateConnectionWithURL,
-// consumed by sceHttpCreateRequest.
-static std::map<s32, std::pair<std::string, s32>> g_connections;
-static std::mutex g_connections_map_mutex;
-static s32 g_request_id_counter = 0;
-static s32 g_connection_id_counter = 0;
-
 std::string host_override = "localhost";
 
 std::string ReplaceHost(std::string url, const std::string& new_host, bool force_http = true) {
@@ -181,32 +174,9 @@ int PS4_SYSV_ABI sceHttpCreateConnection() {
 }
 
 int PS4_SYSV_ABI sceHttpCreateConnectionWithURL(int tmplId, const char* url, bool enableKeepalive) {
-    LOG_INFO(Lib_Http, "called tmpid = {} url = {} enableKeepalive = {}", tmplId,
-             url ? std::string(url) : std::string(), enableKeepalive ? 1 : 0);
-
-    if (!g_isHttpInitialized) {
-
-        return ORBIS_HTTP_ERROR_BEFORE_INIT;
-    }
-
-    if (url == nullptr) {
-
-        return ORBIS_HTTP_ERROR_INVALID_VALUE;
-    }
-
-    std::lock_guard<std::mutex> lock_t(g_templates_map_mutex);
-    auto tmpl_it = g_templates.find(tmplId);
-    if (tmpl_it == g_templates.end()) {
-
-        return ORBIS_HTTP_ERROR_INVALID_ID;
-    }
-
-    s32 conn_id = g_connection_id_counter++;
-
-    std::lock_guard<std::mutex> lock_c(g_connections_map_mutex);
-    g_connections.emplace(conn_id, std::make_pair(std::string(url), tmplId));
-
-    return conn_id;
+    LOG_ERROR(Lib_Http, "(STUBBED) called tmpid = {} url = {} enableKeepalive = {}", tmplId,
+              std::string(url), enableKeepalive ? 1 : 0);
+    return ORBIS_OK;
 }
 
 int PS4_SYSV_ABI sceHttpCreateEpoll() {
@@ -214,57 +184,9 @@ int PS4_SYSV_ABI sceHttpCreateEpoll() {
     return ORBIS_OK;
 }
 
-int PS4_SYSV_ABI sceHttpCreateRequest(s32 conn_id, s32 method, const char* path, u64 content_length) {
-    LOG_INFO(Lib_Http, "called conn_id = {} method = {} path = {} content_length = {}", conn_id,
-             method, path ? std::string(path) : std::string(), content_length);
-
-    if (!g_isHttpInitialized) {
-
-        return ORBIS_HTTP_ERROR_BEFORE_INIT;
-    }
-
-    if (method >= ORBIS_INTERNAL_HTTP_REQUEST_METHOD_INVALID) {
-
-        return ORBIS_HTTP_ERROR_UNKNOWN_METHOD;
-    }
-
-    std::string base_url;
-    s32 tmpl_id;
-    {
-        std::lock_guard<std::mutex> lock_c(g_connections_map_mutex);
-        auto conn_it = g_connections.find(conn_id);
-        if (conn_it == g_connections.end()) {
-
-            return ORBIS_HTTP_ERROR_INVALID_ID;
-        }
-        base_url = conn_it->second.first;
-        tmpl_id = conn_it->second.second;
-    }
-
-    std::string full_url = base_url;
-    if (path != nullptr && path[0] != '\0') {
-        if (!full_url.empty() && full_url.back() != '/' && path[0] != '/') {
-            full_url += '/';
-        }
-        full_url += path;
-    }
-
-    std::string url_str = ReplaceHost(full_url, host_override);
-
-    std::lock_guard<std::mutex> lock_t(g_templates_map_mutex);
-    auto tmpl_it = g_templates.find(tmpl_id);
-    if (tmpl_it == g_templates.end()) {
-
-        return ORBIS_HTTP_ERROR_INVALID_ID;
-    }
-
-    s32 request_id = g_request_id_counter++;
-    auto new_request = RequestObj(request_id, &tmpl_it->second, method, url_str, content_length);
-
-    std::lock_guard<std::mutex> lock_r(g_requests_map_mutex);
-    g_requests.emplace(request_id, std::move(new_request));
-
-    return request_id;
+int PS4_SYSV_ABI sceHttpCreateRequest() {
+    LOG_ERROR(Lib_Http, "(STUBBED) called");
+    return ORBIS_OK;
 }
 
 int PS4_SYSV_ABI sceHttpCreateRequest2() {
@@ -292,7 +214,8 @@ int PS4_SYSV_ABI sceHttpCreateRequestWithURL(s32 tmpl_id, s32 method, const char
         return ORBIS_HTTP_ERROR_INVALID_VALUE;
     }
 
-    s32 request_id = g_request_id_counter++;
+    static s32 request_id_counter = 0;
+    s32 request_id = request_id_counter++;
 
     std::string url_str = ReplaceHost(std::string(url), host_override);
 
