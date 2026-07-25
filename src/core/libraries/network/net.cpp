@@ -196,7 +196,6 @@ int PS4_SYSV_ABI sceNetBandwidthControlSetPolicy() {
 }
 
 int PS4_SYSV_ABI sceNetBind(OrbisNetId s, const OrbisNetSockaddr* addr, u32 addrlen) {
-    LOG_INFO(Lib_Net, "CTF_TRACE sceNetBind: called fd={}", s);
     if (!g_isNetInitialized) {
         return ORBIS_NET_ERROR_ENOTINIT;
     }
@@ -545,7 +544,6 @@ int PS4_SYSV_ABI sceNetConfigWlanSetDeviceConfig() {
 }
 
 int PS4_SYSV_ABI sceNetConnect(OrbisNetId s, const OrbisNetSockaddr* addr, u32 addrlen) {
-    LOG_INFO(Lib_Net, "CTF_TRACE sceNetConnect: called fd={}", s);
     if (!g_isNetInitialized) {
         return ORBIS_NET_ERROR_ENOTINIT;
     }
@@ -705,7 +703,7 @@ int PS4_SYSV_ABI sceNetEpollControl(OrbisNetId epollid, OrbisNetEpollFlag op, Or
                                         .data = {.fd = id}};
             if (epoll_ctl(epoll->epoll_fd, EPOLL_CTL_ADD, *native_handle, &native_event) != 0) {
                 if (errno == EEXIST) {
-                    // Shared fd (e.g. P2P sockets) may already be registered ï¿½ update instead
+                    // Shared fd (e.g. P2P sockets) may already be registered — update instead
                     if (is_p2p_epoll)
                         LOG_DEBUG(Lib_Net, "P2P EpollControl ADD: EEXIST, using MOD for fd={}",
                                   *native_handle);
@@ -1457,7 +1455,6 @@ int PS4_SYSV_ABI sceNetPppoeStop() {
 }
 
 int PS4_SYSV_ABI sceNetRecv(OrbisNetId s, void* buf, u64 len, int flags) {
-    LOG_INFO(Lib_Net, "CTF_TRACE sceNetRecv: called fd={} len={}", s, len);
     if (!g_isNetInitialized) {
         return ORBIS_NET_ERROR_ENOTINIT;
     }
@@ -1468,7 +1465,6 @@ int PS4_SYSV_ABI sceNetRecv(OrbisNetId s, void* buf, u64 len, int flags) {
 
 int PS4_SYSV_ABI sceNetRecvfrom(OrbisNetId s, void* buf, u64 len, int flags, OrbisNetSockaddr* addr,
                                 u32* paddrlen) {
-    LOG_INFO(Lib_Net, "CTF_TRACE sceNetRecvfrom: called fd={} len={}", s, len);
     if (!g_isNetInitialized) {
         return ORBIS_NET_ERROR_ENOTINIT;
     }
@@ -1491,7 +1487,7 @@ int PS4_SYSV_ABI sceNetResolverAbort() {
 }
 
 int PS4_SYSV_ABI sceNetResolverConnect() {
-    LOG_INFO(Lib_Net, "CTF_TRACE sceNetResolverConnect: (STUBBED) called");
+    LOG_DEBUG(Lib_Net, "(STUBBED) called");
     return ORBIS_OK;
 }
 
@@ -1501,7 +1497,7 @@ int PS4_SYSV_ABI sceNetResolverConnectAbort() {
 }
 
 int PS4_SYSV_ABI sceNetResolverConnectCreate() {
-    LOG_INFO(Lib_Net, "CTF_TRACE sceNetResolverConnectCreate: (STUBBED) called");
+    LOG_DEBUG(Lib_Net, "(STUBBED) called");
     return ORBIS_OK;
 }
 
@@ -1553,12 +1549,12 @@ int PS4_SYSV_ABI sceNetResolverGetError(OrbisNetId resolverid, s32* status) {
 }
 
 int PS4_SYSV_ABI sceNetResolverStartAton() {
-    LOG_INFO(Lib_Net, "CTF_TRACE sceNetResolverStartAton: (STUBBED) called");
+    LOG_DEBUG(Lib_Net, "(STUBBED) called");
     return ORBIS_OK;
 }
 
 int PS4_SYSV_ABI sceNetResolverStartAton6() {
-    LOG_INFO(Lib_Net, "CTF_TRACE sceNetResolverStartAton6: (STUBBED) called");
+    LOG_DEBUG(Lib_Net, "(STUBBED) called");
     return ORBIS_OK;
 }
 
@@ -1597,7 +1593,7 @@ int PS4_SYSV_ABI sceNetResolverStartNtoa(OrbisNetId resolverid, const char* host
 }
 
 int PS4_SYSV_ABI sceNetResolverStartNtoa6() {
-    LOG_INFO(Lib_Net, "CTF_TRACE sceNetResolverStartNtoa6: (STUBBED) called");
+    LOG_DEBUG(Lib_Net, "(STUBBED) called");
     return ORBIS_OK;
 }
 
@@ -1624,7 +1620,6 @@ int PS4_SYSV_ABI sceNetResolverStartNtoaMultipleRecordsEx() {
 }
 
 int PS4_SYSV_ABI sceNetSend(OrbisNetId s, const void* buf, u64 len, int flags) {
-    LOG_INFO(Lib_Net, "CTF_TRACE sceNetSend: called fd={} len={}", s, len);
     if (!g_isNetInitialized) {
         return ORBIS_NET_ERROR_ENOTINIT;
     }
@@ -1642,7 +1637,7 @@ int PS4_SYSV_ABI sceNetSendmsg(OrbisNetId s, const OrbisNetMsghdr* msg, int flag
 
 int PS4_SYSV_ABI sceNetSendto(OrbisNetId s, const void* buf, u64 len, int flags,
                               const OrbisNetSockaddr* addr, u32 addrlen) {
-    LOG_INFO(Lib_Net, "CTF_TRACE sceNetSendto: called fd={} len={} flags={:#x}", s, len, flags);
+    LOG_TRACE(Lib_Net, "sceNetSendto: fd={} len={} flags={:#x}", s, len, flags);
     if (!g_isNetInitialized) {
         return ORBIS_NET_ERROR_ENOTINIT;
     }
@@ -1673,8 +1668,6 @@ int PS4_SYSV_ABI sceNetSetDnsInfoToKernel() {
 
 int PS4_SYSV_ABI sceNetSetsockopt(OrbisNetId s, int level, int optname, const void* optval,
                                   u32 optlen) {
-    LOG_INFO(Lib_Net, "CTF_TRACE sceNetSetsockopt: called fd={} level={} optname={}", s, level,
-             optname);
     if (!g_isNetInitialized) {
         return ORBIS_NET_ERROR_ENOTINIT;
     }
