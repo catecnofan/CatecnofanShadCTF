@@ -42,21 +42,6 @@ static thread_local int32_t net_errno = 0;
 
 static bool g_isNetInitialized = true; // TODO init it properly
 
-// CTF_TRACE helper: hex-dump the first `count` bytes of `data` for protocol logging.
-static std::string CtfTraceHexDump(const void* data, u64 len, u64 max_bytes = 32) {
-    const auto* bytes = reinterpret_cast<const u8*>(data);
-    const u64 count = std::min(len, max_bytes);
-    std::string out;
-    out.reserve(count * 3);
-    for (u64 i = 0; i < count; ++i) {
-        out += fmt::format("{:02x} ", bytes[i]);
-    }
-    if (len > count) {
-        out += fmt::format("... ({} bytes total)", len);
-    }
-    return out;
-}
-
 static int ConvertFamilies(int family) {
     switch (family) {
     case ORBIS_NET_AF_INET:
@@ -560,16 +545,7 @@ int PS4_SYSV_ABI sceNetConfigWlanSetDeviceConfig() {
 }
 
 int PS4_SYSV_ABI sceNetConnect(OrbisNetId s, const OrbisNetSockaddr* addr, u32 addrlen) {
-    if (addr != nullptr && addrlen >= sizeof(OrbisNetSockaddrIn)) {
-        const auto* addr_in = reinterpret_cast<const OrbisNetSockaddrIn*>(addr);
-        const u32 ip = ntohl(addr_in->sin_addr);
-        const u16 port = ntohs(addr_in->sin_port);
-        LOG_INFO(Lib_Net,
-                 "CTF_TRACE sceNetConnect: called fd={} dst_ip={}.{}.{}.{} dst_port={}", s,
-                 (ip >> 24) & 0xff, (ip >> 16) & 0xff, (ip >> 8) & 0xff, ip & 0xff, port);
-    } else {
-        LOG_INFO(Lib_Net, "CTF_TRACE sceNetConnect: called fd={} (no/short addr)", s);
-    }
+    LOG_INFO(Lib_Net, "CTF_TRACE sceNetConnect: called fd={}", s);
     if (!g_isNetInitialized) {
         return ORBIS_NET_ERROR_ENOTINIT;
     }
