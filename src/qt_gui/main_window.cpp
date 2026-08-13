@@ -272,8 +272,8 @@ if (Common::g_is_release) {
             window_title = fmt::format("shadPS4 v{} {} {}", Common::g_version, Common::g_scm_branch,
                                        Common::g_scm_desc);
         } else {
-            window_title = fmt::format("shadPS4 v{} {}/{} {}", Common::g_version, remote_host,
-                                       Common::g_scm_branch, Common::g_scm_desc);
+            window_title = fmt::format("ShadCTF Catecnofan/{} {}", Common::g_scm_branch,
+                                       Common::g_version);
         }
     }
     setWindowTitle(QString::fromStdString(window_title));
@@ -727,6 +727,7 @@ void MainWindow::CreateActions() {
     m_theme_act_group->addAction(ui->setThemeShadlix);
     m_theme_act_group->addAction(ui->setThemeShadlixCave);
     m_theme_act_group->addAction(ui->setThemeQSS);
+    m_theme_act_group->addAction(ui->setThemeShadCTF);
 }
 
 void MainWindow::toggleLabelsUnderIcons() {
@@ -1382,6 +1383,8 @@ void MainWindow::CreateConnects() {
                     themeToReload = Theme::Shadlix;
                 else if (ui->setThemeShadlixCave->isChecked())
                     themeToReload = Theme::ShadlixCave;
+                else if (ui->setThemeShadCTF->isChecked())
+                    themeToReload = Theme::ShadCTF;
 
                 if (themeToReload == Theme::QSS) {
                     themeToReload = Theme::Dark;
@@ -2032,6 +2035,12 @@ void MainWindow::CreateConnects() {
         applyThemeAndReconstruct();
     });
 
+    connect(ui->setThemeShadCTF, &QAction::triggered, this, [this, applyThemeAndReconstruct]() {
+        m_window_themes.SetWindowTheme(Theme::ShadCTF, ui->mw_searchbar);
+        Config::setMainWindowTheme(static_cast<int>(Theme::ShadCTF));
+        applyThemeAndReconstruct();
+    });
+
     QObject::connect(m_ipc_client.get(), &IpcClient::LogEntrySent, this, &MainWindow::PrintLog);
 }
 void MainWindow::PrintLog(QString entry, QColor textColor) {
@@ -2592,6 +2601,10 @@ void MainWindow::SetLastUsedTheme() {
         break;
     case Theme::QSS:
         ui->setThemeQSS->setChecked(true);
+        applyTheme();
+        break;
+    case Theme::ShadCTF:
+        ui->setThemeShadCTF->setChecked(true);
         applyTheme();
         break;
     }

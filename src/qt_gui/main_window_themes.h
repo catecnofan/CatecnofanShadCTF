@@ -23,7 +23,8 @@ enum class Theme : int {
     Neon,
     Shadlix,
     ShadlixCave,
-    QSS
+    QSS,
+    ShadCTF
 };
 
 class WindowThemes : public QObject {

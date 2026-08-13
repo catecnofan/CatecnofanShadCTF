@@ -322,7 +322,7 @@ u32 game_specific_dialog_geometry_x = 200;
 u32 game_specific_dialog_geometry_y = 200;
 u32 game_specific_dialog_geometry_w = 900;
 u32 game_specific_dialog_geometry_h = 700;
-u32 mw_themes = 0;
+u32 mw_themes = 12; // Theme::ShadCTF
 u32 m_icon_size = 36;
 u32 m_icon_size_grid = 69;
 u32 m_slider_pos = 0;
@@ -1858,7 +1858,7 @@ void load(const std::filesystem::path& path, bool is_game_specific) {
         m_slider_pos = toml::find_or<int>(gui, "sliderPos", 0);
         m_slider_pos_grid = toml::find_or<int>(gui, "sliderPosGrid", 0);
 
-        mw_themes = toml::find_or<int>(gui, "theme", 0);
+        mw_themes = toml::find_or<int>(gui, "theme", 12); // default: Theme::ShadCTF
         guiStyle = toml::find_or<std::string>(gui, "guiStyle", "");
         version_path = toml::find_or<std::string>(gui, "version_path", "");
 

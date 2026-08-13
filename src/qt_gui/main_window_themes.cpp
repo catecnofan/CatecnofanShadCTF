@@ -336,6 +336,21 @@ void WindowThemes::SetWindowTheme(Theme theme, QLineEdit* mw_searchbar, const QS
                      "#39C591; } QLineEdit:focus { border:1px solid #2A82DA; }");
         break;
 
+    case Theme::ShadCTF:
+        wBg = "#121218";
+        txt = "#C8C8DC";
+        toolBg = "#16161C";
+        accent = "#00C8FF";
+        hov = "#00C8FF";
+        inp = "#1C1C26";
+        border = "#00C8FF";
+        sel = "#00C8FF";
+        grid = "#00C8FF";
+        m_iconBaseColor = QColor(0, 200, 255);
+        setSearchbar("QLineEdit { background-color:#1C1C26; color:#00C8FF; border:1px solid "
+                     "#00C8FF; } QLineEdit:focus { border:1px solid #00C8FF; }");
+        break;
+
     case Theme::QSS:
         break;
     }
