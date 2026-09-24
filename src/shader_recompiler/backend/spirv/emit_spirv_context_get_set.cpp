@@ -79,9 +79,18 @@ Id EmitReadConstBuffer(EmitContext& ctx, u32 handle, Id index) {
     const auto [id, pointer_type] = buffer.Alias(PointerType::U32);
     const Id ptr{ctx.OpAccessChain(pointer_type, id, ctx.u32_zero_value, index)};
     Id result{ctx.OpLoad(ctx.U32[1], ptr)};
-    if (ctx.stage == Stage::Fragment && ctx.info.pgm_hash == 0x5b8c6e5f && handle == 0) {
-        if (MemoryPatcher::g_game_serial == "CUSA14209" ||
-            MemoryPatcher::g_game_serial == "CUSA14204") {
+    // UFC 4 blackness: force CB0[6]=0 on skin/CAF-related fragment shaders.
+    // Base hash 0x5b8c6e5f (Dmugetsu). Extended 2026-09-24 from career dumps where
+    // fighters rendered black — same ReadConstBuffer #0,#6 pattern in these pgm_hashes.
+    if (ctx.stage == Stage::Fragment && handle == 0 &&
+        (MemoryPatcher::g_game_serial == "CUSA14209" ||
+         MemoryPatcher::g_game_serial == "CUSA14204")) {
+        const u64 h = ctx.info.pgm_hash;
+        const bool ufc4_blackness_cb0_6 =
+            h == 0x5b8c6e5fULL || h == 0xd3e5fe4cULL || h == 0x16965a45ULL ||
+            h == 0x216ea003ULL || h == 0x24a8b9f3ULL || h == 0xa55c91baULL ||
+            h == 0x372cc6f1ULL || h == 0x1959d384ULL;
+        if (ufc4_blackness_cb0_6) {
             const Id is_six = ctx.OpIEqual(ctx.U1[1], index, ctx.ConstU32(6u));
             result = ctx.OpSelect(ctx.U32[1], is_six, ctx.u32_zero_value, result);
         }
