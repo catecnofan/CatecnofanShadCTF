@@ -5,6 +5,8 @@
 #include "common/memory_patcher.h"
 #include "shader_recompiler/backend/spirv/emit_spirv_instructions.h"
 #include "shader_recompiler/backend/spirv/spirv_emit_context.h"
+#include "shader_recompiler/ir/opcodes.h"
+#include "shader_recompiler/ir/value.h"
 
 namespace Shader::Backend::SPIRV {
 
@@ -38,6 +40,40 @@ static Id EmitColorCorrectionDisablePassthrough(EmitContext& ctx, Id coords) {
     const Id z = ctx.OpCompositeExtract(ctx.F32[1], coords, 2);
     const Id one = ctx.ConstF32(1.0f);
     return ctx.OpCompositeConstruct(ctx.F32[4], x, y, z, one);
+}
+
+static bool IsUfc4SkinFs(const EmitContext& ctx) {
+    if (ctx.stage != Stage::Fragment) {
+        return false;
+    }
+    if (MemoryPatcher::g_game_serial != "CUSA14209" &&
+        MemoryPatcher::g_game_serial != "CUSA14204") {
+        return false;
+    }
+    const u64 h = ctx.info.pgm_hash;
+    return h == 0x25204fdbULL || h == 0x958391e7ULL;
+}
+
+// CAF skin FS passes vec2 UV into array/3D views (IR type error F32x2 != F32x4).
+// SPIR-V array sample needs a layer; missing it samples a garbage slice → stained/black skin.
+static Id PadUfc4SkinArrayCoords(EmitContext& ctx, IR::Inst* inst, u32 handle, Id coords) {
+    if (!IsUfc4SkinFs(ctx)) {
+        return coords;
+    }
+    const auto& texture = ctx.images[handle & 0xFFFF];
+    if (texture.view_type != AmdGpu::ImageType::Color2DArray &&
+        texture.view_type != AmdGpu::ImageType::Color3D &&
+        texture.view_type != AmdGpu::ImageType::Color1DArray) {
+        return coords;
+    }
+    const IR::Value coord_val = inst->Arg(1);
+    const IR::Inst* coord_inst = coord_val.TryInstRecursive();
+    if (!coord_inst || coord_inst->GetOpcode() != IR::Opcode::CompositeConstructF32x2) {
+        return coords;
+    }
+    const Id x = ctx.OpCompositeExtract(ctx.F32[1], coords, 0);
+    const Id y = ctx.OpCompositeExtract(ctx.F32[1], coords, 1);
+    return ctx.OpCompositeConstruct(ctx.F32[3], x, y, ctx.f32_zero_value);
 }
 
 struct ImageOperands {
@@ -117,6 +153,7 @@ Id EmitImageSampleImplicitLod(EmitContext& ctx, IR::Inst* inst, u32 handle, Id c
         return EmitColorCorrectionDisablePassthrough(ctx, coords);
     }
 
+    coords = PadUfc4SkinArrayCoords(ctx, inst, handle, coords);
     const auto& texture = ctx.images[handle & 0xFFFF];
     const Id image = ctx.OpLoad(texture.image_type, texture.id);
     const Id result_type = texture.data_types->Get(4);
@@ -139,6 +176,7 @@ Id EmitImageSampleExplicitLod(EmitContext& ctx, IR::Inst* inst, u32 handle, Id c
         return EmitColorCorrectionDisablePassthrough(ctx, coords);
     }
 
+    coords = PadUfc4SkinArrayCoords(ctx, inst, handle, coords);
     const auto& texture = ctx.images[handle & 0xFFFF];
     const Id image = ctx.OpLoad(texture.image_type, texture.id);
     const Id result_type = texture.data_types->Get(4);
@@ -259,6 +297,7 @@ Id EmitImageGradient(EmitContext& ctx, IR::Inst* inst, u32 handle, Id coords, Id
         return EmitColorCorrectionDisablePassthrough(ctx, coords);
     }
 
+    coords = PadUfc4SkinArrayCoords(ctx, inst, handle, coords);
     const auto& texture = ctx.images[handle & 0xFFFF];
     const Id image = ctx.OpLoad(texture.image_type, texture.id);
     const Id result_type = texture.data_types->Get(4);
