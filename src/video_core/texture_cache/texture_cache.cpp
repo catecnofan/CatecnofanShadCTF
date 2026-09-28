@@ -6,6 +6,7 @@
 #include "common/assert.h"
 #include "common/config.h"
 #include "common/debug.h"
+#include "common/memory_patcher.h"
 #include "common/scope_exit.h"
 #include "core/memory.h"
 #include "video_core/buffer_cache/buffer_cache.h"
@@ -20,6 +21,16 @@ namespace VideoCore {
 
 static constexpr u64 PageShift = 12;
 static constexpr u64 NumFramesBeforeRemoval = 32;
+
+static bool IsUfc4Serial() {
+    return MemoryPatcher::g_game_serial == "CUSA14209" ||
+           MemoryPatcher::g_game_serial == "CUSA14204";
+}
+
+static bool Is2DFamily(AmdGpu::ImageType type) {
+    return type == AmdGpu::ImageType::Color2D || type == AmdGpu::ImageType::Color2DArray ||
+           type == AmdGpu::ImageType::Color2DMsaa || type == AmdGpu::ImageType::Color2DMsaaArray;
+}
 
 TextureCache::TextureCache(const Vulkan::Instance& instance_, Vulkan::Scheduler& scheduler_,
                            AmdGpu::Liverpool* liverpool_, BufferCache& buffer_cache_,
@@ -441,6 +452,12 @@ std::tuple<ImageId, int, int> TextureCache::ResolveOverlap(const ImageInfo& imag
         // Size and resources are less than or equal, use image view.
         if (image_info.pixel_format != cache_image.info.pixel_format ||
             image_info.guest_size <= cache_image.info.guest_size) {
+            // UFC 4 CAF: same address is first a color RT (fewer layers) then a 2D array
+            // sample (more layers). Reusing the small image makes Vulkan OOB → black/stains.
+            if (IsUfc4Serial() && image_info.resources > cache_image.info.resources &&
+                Is2DFamily(image_info.type) && Is2DFamily(cache_image.info.type)) {
+                return {ExpandImage(image_info, cache_image_id), -1, -1};
+            }
             auto result_id = merged_image_id ? merged_image_id : cache_image_id;
             const auto& result_image = slot_images[result_id];
             const bool is_compatible =
@@ -449,8 +466,10 @@ std::tuple<ImageId, int, int> TextureCache::ResolveOverlap(const ImageInfo& imag
         }
 
         // Size and resources are greater, expand the image.
-        if (image_info.type == cache_image.info.type &&
-            image_info.resources > cache_image.info.resources) {
+        if (image_info.resources > cache_image.info.resources &&
+            (image_info.type == cache_image.info.type ||
+             (IsUfc4Serial() && Is2DFamily(image_info.type) &&
+              Is2DFamily(cache_image.info.type)))) {
             return {ExpandImage(image_info, cache_image_id), -1, -1};
         }
 
@@ -697,10 +716,16 @@ ImageId TextureCache::FindImage(ImageDesc& desc, bool exact_fmt) {
             // Cannot reuse this image as we need the exact requested format.
             image_id = {};
         } else if (image_resolved.info.resources < info.resources) {
-            // The image was clearly picked up wrong.
-            FreeImage(image_id);
-            image_id = {};
-            LOG_WARNING(Render_Vulkan, "Image overlap resolve failed");
+            if (IsUfc4Serial() && Is2DFamily(image_resolved.info.type) &&
+                Is2DFamily(info.type) &&
+                image_resolved.info.guest_address == info.guest_address) {
+                image_id = ExpandImage(info, image_id);
+            } else {
+                // The image was clearly picked up wrong.
+                FreeImage(image_id);
+                image_id = {};
+                LOG_WARNING(Render_Vulkan, "Image overlap resolve failed");
+            }
         }
     }
     // Create and register a new image
