@@ -886,6 +886,16 @@ void TextureCache::RefreshImage(Image& image) {
     const bool is_gpu_modified = True(image.flags & ImageFlagBits::GpuModified);
     const bool is_gpu_dirty = True(image.flags & ImageFlagBits::GpuDirty);
 
+    // UFC 4 CAF: albedo is GPU-authored. GpuDirty would reupload from guest RAM that is
+    // often still black/stale and wipe the RT. Keep GPU contents unless CPU also dirtied.
+    if (IsUfc4Serial() && is_gpu_modified && is_gpu_dirty &&
+        False(image.flags & ImageFlagBits::CpuDirty) &&
+        False(image.flags & ImageFlagBits::MaybeCpuDirty)) {
+        image.flags &= ~ImageFlagBits::GpuDirty;
+        image.flags &= ~ImageFlagBits::Dirty;
+        return;
+    }
+
     boost::container::small_vector<vk::BufferImageCopy, 14> image_copies;
     for (u32 m = 0; m < num_mips; m++) {
         const u32 width = std::max(image.info.size.width >> m, 1u);
