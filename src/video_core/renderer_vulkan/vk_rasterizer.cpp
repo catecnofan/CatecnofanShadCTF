@@ -31,6 +31,12 @@ bool Gow3Features::depth_clear_skip = false;
 
 void Gow3Features::Init() {
     const auto& serial = Common::ElfInfo::Instance().GameSerial();
+    const bool is_ufc4 = serial == "CUSA14209" || serial == "CUSA14204";
+    if (is_ufc4) {
+        rt_alias_copy = true;
+        LOG_INFO(Render, "[UFC4] rt_alias_copy enabled");
+        return;
+    }
     const bool is_gow3 = serial == "CUSA01623" || serial == "CUSA01715" || serial == "CUSA01740";
     if (!is_gow3)
         return;

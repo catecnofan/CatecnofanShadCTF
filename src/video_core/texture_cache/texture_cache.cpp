@@ -118,14 +118,22 @@ void TextureCache::CopyFromLastRt(VAddr addr, ImageId tex_id, u32 copy_w, u32 co
         return;
     }
     ImageId rt_id = it->second;
+    if (rt_id == tex_id) {
+        return;
+    }
     if (!slot_images.is_allocated(rt_id)) {
         last_rt_address_.erase(it);
         return;
     }
     auto& rt_image = slot_images[rt_id];
-    // Only copy if the recorded RT is larger than the texture
-    if (rt_image.info.size.width <= copy_w && rt_image.info.size.height <= copy_h) {
+    // GOW3: only a larger RT. UFC 4 CAF: same-size alias (RT vs sample VkImage).
+    const bool ufc4 = IsUfc4Serial();
+    if (!ufc4 && rt_image.info.size.width <= copy_w && rt_image.info.size.height <= copy_h) {
         return;
+    }
+    if (ufc4) {
+        copy_w = std::min(copy_w, rt_image.info.size.width);
+        copy_h = std::min(copy_h, rt_image.info.size.height);
     }
     if (!slot_images.is_allocated(tex_id)) {
         return;
@@ -641,8 +649,16 @@ ImageId TextureCache::ExpandImage(const ImageInfo& info, ImageId image_id) {
     auto& src_image = slot_images[image_id];
     auto& new_image = slot_images[new_image_id];
 
-    RefreshImage(new_image);
-    new_image.CopyImage(src_image);
+    // UFC 4 CAF: new image is Dirty and guest RAM is still black. Refresh first
+    // would wipe the GPU albedo; copy the RT contents, then keep them.
+    if (IsUfc4Serial() && True(src_image.flags & ImageFlagBits::GpuModified)) {
+        new_image.CopyImage(src_image);
+        new_image.flags |= ImageFlagBits::GpuModified;
+        new_image.flags &= ~ImageFlagBits::Dirty;
+    } else {
+        RefreshImage(new_image);
+        new_image.CopyImage(src_image);
+    }
 
     if (src_image.binding.is_bound || src_image.binding.is_target) {
         src_image.binding.needs_rebind = 1u;
