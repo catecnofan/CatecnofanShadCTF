@@ -902,12 +902,11 @@ void TextureCache::RefreshImage(Image& image) {
     const bool is_gpu_modified = True(image.flags & ImageFlagBits::GpuModified);
     const bool is_gpu_dirty = True(image.flags & ImageFlagBits::GpuDirty);
 
-    // UFC 4 CAF: albedo is GPU-authored. GpuDirty would reupload from guest RAM that is
-    // often still black/stale and wipe the RT. Keep GPU contents unless CPU also dirtied.
-    if (IsUfc4Serial() && is_gpu_modified && is_gpu_dirty &&
-        False(image.flags & ImageFlagBits::CpuDirty) &&
-        False(image.flags & ImageFlagBits::MaybeCpuDirty)) {
-        image.flags &= ~ImageFlagBits::GpuDirty;
+    // UFC 4 CAF: GPU wrote the albedo. Page faults then set CpuDirty on the same
+    // pages, and a guest reupload paints black. If the GPU already authored it,
+    // keep the VkImage — do not upload RAM.
+    if (IsUfc4Serial() && is_gpu_modified && Is2DFamily(image.info.type) &&
+        !image.info.props.is_depth) {
         image.flags &= ~ImageFlagBits::Dirty;
         return;
     }

@@ -1194,6 +1194,10 @@ void Rasterizer::BindTextures(const Shader::Info& stage, Shader::Backend::Bindin
             image.usage.storage |= is_storage;
             image.usage.texture |= !is_storage;
 
+            if (Gow3Features::rt_alias_copy && is_storage) {
+                texture_cache.RecordRtWrite(desc.info.guest_address, image_id);
+            }
+
             // Collect storage image for post-dispatch buffer-cache sync.
             if (Gow3Features::storage_image_sync && is_storage) {
                 storage_sync_.Collect(image_id, image);
