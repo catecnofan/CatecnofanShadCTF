@@ -121,6 +121,10 @@ vk::PrimitiveTopology PrimitiveType(AmdGpu::PrimitiveType type) {
         return vk::PrimitiveTopology::eTriangleFan;
     case AmdGpu::PrimitiveType::TriangleStrip:
         return vk::PrimitiveTopology::eTriangleStrip;
+    case AmdGpu::PrimitiveType::QuadStrip:
+        // Official 0.19: hair/cards use QuadStrip; treating as list UNREACHABLE → missing mesh
+        // and a leftover stretched triangle (the copper slab over the head).
+        return vk::PrimitiveTopology::eTriangleStrip;
     case AmdGpu::PrimitiveType::AdjLineList:
         return vk::PrimitiveTopology::eLineListWithAdjacency;
     case AmdGpu::PrimitiveType::AdjLineStrip:
